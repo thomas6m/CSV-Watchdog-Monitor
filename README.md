@@ -1,267 +1,233 @@
 # CSV Watchdog Monitor
 
-A robust Python application that monitors directories for new CSV files, validates their stability, and dynamically merges cluster data into a master file. Designed for safe periodic execution via cron jobs or task schedulers.
+A robust Python script that monitors a directory for new CSV files, validates them, merges them into a master dataset, and archives the processed files. Designed for production use with comprehensive error handling, logging, and safety features.
 
 ## Features
 
-- **File Stability Verification**: Uses MD5 checksums to ensure files are completely written before processing
-- **Dynamic Schema Management**: Automatically adds new columns and removes obsolete ones
-- **Atomic Operations**: Safe file handling with locks and temporary files
-- **Backup System**: Automatic backups with configurable retention
-- **Encoding Detection**: Automatic detection and handling of various file encodings
-- **Progress Reporting**: Optional progress display for batch operations
-- **Email Notifications**: Configurable email alerts for errors and completion
-- **Dry Run Mode**: Test processing without making changes
-- **Comprehensive Logging**: Detailed logging with configurable levels
+- **Automatic CSV Detection**: Monitors a watch directory for new CSV files
+- **File Stability Verification**: Uses MD5 checksums to ensure files are completely written
+- **Safe Merging**: Uses file locking to prevent concurrent access issues
+- **Dynamic Schema Updates**: Automatically handles new columns in incoming CSV files
+- **UTF-8 Validation**: Ensures all files are properly encoded
+- **Comprehensive Logging**: Rotating logs with configurable levels
+- **Dry-Run Mode**: Test operations without making changes
+- **Metadata Tracking**: Maintains information about merged datasets
+- **Automatic Archiving**: Moves processed files to archive with timestamps
+- **Configurable**: JSON-based configuration with sensible defaults
 
 ## Installation
 
 ### Requirements
 
-- Python 3.7+
-- Required packages:
-
 ```bash
-pip install pandas filelock chardet
+pip install pandas filelock
 ```
 
-### Quick Start
+### Dependencies
 
-1. Clone or download the script
-2. Create the required directories (or let the script create them):
-   ```bash
-   mkdir csv_inbox csv_archive csv_backups
-   ```
-3. Run the monitor:
+- Python 3.7+
+- pandas
+- filelock
+
+## Quick Start
+
+1. **Basic usage** (uses default configuration):
    ```bash
    python csv_watchdog.py
    ```
 
-## Usage
+2. **Test run** (see what would happen without making changes):
+   ```bash
+   python csv_watchdog.py --dry-run
+   ```
 
-### Command Line Options
-
-```bash
-python csv_watchdog.py [OPTIONS]
-
-Options:
-  --dry-run           Process files but don't write or archive
-  --log-to-console    Also log to console (in addition to file)
-  --sort-output       Sort output by cluster key column
-  --config-path FILE  Path to config file (default: config.json)
-  --backup-count N    Number of backup files to keep
-  --progress          Show progress for file processing
-  -h, --help          Show help message
-```
-
-### Basic Examples
-
-```bash
-# Standard operation
-python csv_watchdog.py
-
-# Dry run to test without changes
-python csv_watchdog.py --dry-run --log-to-console
-
-# Show progress and keep 10 backups
-python csv_watchdog.py --progress --backup-count 10
-
-# Use custom configuration
-python csv_watchdog.py --config-path production.json
-```
-
-### Scheduled Execution
-
-**Linux/macOS (crontab):**
-```bash
-# Run every 15 minutes
-*/15 * * * * /usr/bin/python3 /path/to/csv_watchdog.py
-
-# Run hourly with logging
-0 * * * * /usr/bin/python3 /path/to/csv_watchdog.py --log-to-console >> /var/log/csv_watchdog_cron.log 2>&1
-```
-
-**Windows (Task Scheduler):**
-- Create a new task
-- Set trigger to run every 15 minutes
-- Set action to run: `python.exe C:\path\to\csv_watchdog.py`
+3. **With custom configuration**:
+   ```bash
+   export CSV_MONITOR_CONFIG=my_config.json
+   python csv_watchdog.py
+   ```
 
 ## Configuration
 
-The application uses a JSON configuration file (`config.json` by default). All settings have sensible defaults.
-
-### Basic Configuration
+Create a `config.json` file to customize behavior:
 
 ```json
 {
   "watch_dir": "csv_inbox",
-  "archive_dir": "csv_archive",
-  "backup_dir": "csv_backups",
+  "archive_dir": "csv_archive", 
   "merged_file": "final_clusters_data.csv",
+  "metadata_file": "merged_metadata.json",
   "key_column": "cluster_name",
-  "log_file": "csv_watchdog.log",
-  "log_level": "INFO"
-}
-```
-
-### Complete Configuration Example
-
-```json
-{
-  "watch_dir": "csv_inbox",
-  "archive_dir": "csv_archive",
-  "backup_dir": "csv_backups",
-  "merged_file": "final_clusters_data.csv",
-  "key_column": "cluster_name",
-  "log_file": "csv_watchdog.log",
+  "required_columns": ["id", "name"],
   "checksum_wait_seconds": 5,
-  "chunk_size": 4096,
-  "supported_extensions": [".csv"],
   "max_file_size_mb": 500,
-  "required_columns": ["cluster_name", "status"],
-  "lock_timeout_seconds": 30,
-  "max_clusters_in_log": 20,
-  "log_level": "INFO",
-  "log_to_console": false,
-  "sort_output": false,
-  "dry_run": false,
-  "backup_count": 5,
-  "show_progress": false,
-  "auto_detect_encoding": true,
   "csv_delimiter": ",",
-  "notification": {
-    "enabled": true,
-    "smtp_server": "smtp.gmail.com",
-    "smtp_port": 587,
-    "username": "monitoring@company.com",
-    "password": "your-app-password",
-    "from_email": "monitoring@company.com",
-    "to_emails": ["admin@company.com", "devops@company.com"],
-    "notify_on_error": true,
-    "notify_on_success": false
-  }
+  "csv_encoding": "utf-8",
+  "log_level": "INFO",
+  "log_to_console": true
 }
 ```
+
+### Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `watch_dir` | "csv_inbox" | Directory to monitor for new CSV files |
+| `archive_dir` | "csv_archive" | Directory to store processed files |
+| `merged_file` | "final_clusters_data.csv" | Output file containing merged data |
+| `metadata_file` | "merged_metadata.json" | Metadata about the merged dataset |
+| `key_column` | "cluster_name" | Column used as unique identifier for merging |
+| `required_columns` | `[]` | List of columns that must be present in all files |
+| `checksum_wait_seconds` | 5 | Time to wait between checksum calculations |
+| `max_file_size_mb` | 500 | Maximum file size to process |
+| `csv_delimiter` | "," | CSV delimiter character |
+| `csv_encoding` | "utf-8" | Character encoding for CSV files |
+| `log_level` | "INFO" | Logging level (DEBUG, INFO, WARNING, ERROR) |
+| `log_to_console` | false | Whether to output logs to console |
+| `log_file` | "csv_watchdog.log" | Log file path |
+| `lock_timeout_seconds` | 30 | File lock timeout |
 
 ## How It Works
 
-### Processing Flow
-
-1. **File Discovery**: Scans the watch directory for supported file types
-2. **Stability Check**: Calculates MD5 checksums, waits, then rechecks to ensure files are stable
-3. **Validation**: Validates file structure and required columns
-4. **Backup**: Creates timestamped backup of existing master file
-5. **Merging**: Intelligently merges new data with existing data:
-   - Replaces rows with matching key values
-   - Adds new columns from incoming data
-   - Removes obsolete columns (when safe)
-6. **Atomic Save**: Uses temporary files and atomic moves for safe updates
-7. **Archiving**: Moves processed files to archive directory with timestamps
-
-### Data Merging Logic
-
-- **Key-based Updates**: Rows with matching key column values are replaced entirely
-- **Column Addition**: New columns from incoming files are automatically added
-- **Column Removal**: Columns that exist in master but not in new data are removed IF they contain only null values for the affected clusters
-- **Schema Evolution**: The master file schema evolves dynamically while preserving data integrity
+1. **File Discovery**: Scans the watch directory for CSV files
+2. **Stability Check**: Calculates MD5 checksums, waits, then recalculates to ensure files are stable
+3. **Validation**: Checks UTF-8 encoding, required columns, and data integrity
+4. **Merging Logic**: 
+   - Loads existing merged file (if exists)
+   - Removes rows with matching key column values
+   - Adds new data from incoming file
+   - Handles schema changes (new columns)
+   - Removes obsolete columns when appropriate
+5. **Safe Writing**: Uses atomic file operations and locking
+6. **Archiving**: Moves processed files to archive with timestamps
+7. **Metadata**: Updates information about the merged dataset
 
 ## Directory Structure
 
 ```
 project/
 ├── csv_watchdog.py          # Main script
-├── config.json              # Configuration file
+├── config.json              # Configuration (optional)
+├── csv_inbox/               # Watch directory (created automatically)
+├── csv_archive/             # Archive directory (created automatically)
+├── final_clusters_data.csv  # Merged output file
+├── merged_metadata.json     # Dataset metadata
 ├── csv_watchdog.log         # Log file
-├── final_clusters_data.csv  # Master merged file
-├── csv_inbox/               # Drop new CSV files here
-├── csv_archive/             # Processed files stored here
-└── csv_backups/             # Automatic backups
+└── final_clusters_data.csv.lock  # Lock file (temporary)
 ```
 
-## Logging
+## Usage Examples
 
-The application provides comprehensive logging with configurable levels:
+### Basic Monitoring
+Place CSV files in the `csv_inbox` directory and run:
+```bash
+python csv_watchdog.py
+```
 
-- **DEBUG**: Detailed operational information
-- **INFO**: General operational messages (default)
-- **WARNING**: Important notices (file instability, etc.)
-- **ERROR**: Error conditions that don't stop execution
-- **CRITICAL**: Serious errors that may stop execution
+### Scheduled Execution
+Add to crontab for periodic execution:
+```bash
+# Run every 5 minutes
+*/5 * * * * /usr/bin/python3 /path/to/csv_watchdog.py
 
-Log files are UTF-8 encoded and include timestamps, log levels, and detailed messages.
+# Run every hour
+0 * * * * /usr/bin/python3 /path/to/csv_watchdog.py
+```
+
+### Custom Configuration
+```bash
+# Use custom config file
+export CSV_MONITOR_CONFIG=/path/to/my_config.json
+python csv_watchdog.py
+
+# Dry run with custom config
+CSV_MONITOR_CONFIG=test_config.json python csv_watchdog.py --dry-run
+```
+
+## File Processing Rules
+
+### Merging Logic
+- Files are merged based on the `key_column` (default: "cluster_name")
+- Existing rows with matching keys are replaced by new data
+- New columns are automatically added to the schema
+- Obsolete columns are removed if they're empty for all new records
+
+### File Requirements
+- Must be valid CSV format
+- Must be UTF-8 encoded
+- Must contain the key column
+- Must contain any required columns (if specified)
+- Must be under the size limit
 
 ## Error Handling
 
-The application handles various error conditions gracefully:
+The script handles various error conditions gracefully:
 
-- **File Access Errors**: Logs errors and continues with other files
-- **Data Validation Errors**: Skips invalid files but continues processing
-- **Network Issues**: For email notifications, logs errors but doesn't fail
-- **Disk Space**: Monitors file sizes and prevents processing oversized files
-- **Encoding Issues**: Automatic fallback encoding handling
+- **File corruption**: Skips corrupted files and logs errors
+- **Encoding issues**: Validates UTF-8 encoding before processing
+- **Missing columns**: Checks for required columns
+- **Large files**: Enforces size limits
+- **Concurrent access**: Uses file locking to prevent conflicts
+- **Unstable files**: Waits for files to finish writing
 
-## Email Notifications
+## Logging
 
-Configure email notifications for:
-- Processing errors
-- Successful completions
-- Critical failures
+Logs are written to `csv_watchdog.log` by default with rotation:
+- Maximum size: 1MB per file
+- Keeps 5 backup files
+- Configurable log levels
+- Optional console output
 
-Supports SMTP with STARTTLS (Gmail, Outlook, etc.).
+### Log Levels
+- **DEBUG**: Detailed processing information
+- **INFO**: Normal operations (default)
+- **WARNING**: Non-fatal issues
+- **ERROR**: Processing failures
 
-### Gmail Configuration Example
+## Monitoring and Maintenance
 
-1. Enable 2-factor authentication in Gmail
-2. Generate an app-specific password
-3. Use these settings:
-   ```json
-   "notification": {
-     "enabled": true,
-     "smtp_server": "smtp.gmail.com",
-     "smtp_port": 587,
-     "username": "your-email@gmail.com",
-     "password": "your-16-char-app-password",
-     "from_email": "your-email@gmail.com",
-     "to_emails": ["recipient@company.com"]
-   }
-   ```
+### Metadata File
+The `merged_metadata.json` file contains:
+```json
+{
+  "last_updated": "2025-06-29T10:30:45.123456",
+  "row_count": 15420,
+  "column_count": 8,
+  "columns": ["cluster_name", "id", "name", "value", "timestamp"]
+}
+```
 
-## Performance Considerations
-
-- **Memory Usage**: Loads entire CSV files into memory; monitor usage with large files
-- **File Locking**: Uses file locks to prevent concurrent access issues
-- **Checksum Calculation**: May be slow for very large files
-- **Backup Storage**: Monitor backup directory size with high-frequency processing
+### Archive Management
+Processed files are moved to the archive directory with timestamps:
+```
+csv_archive/
+├── data_batch1.csv.20250629T103045.123
+├── data_batch2.csv.20250629T104512.456
+└── data_batch3.csv.20250629T105030.789
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
 **Files not being processed:**
-- Check file permissions in watch directory
-- Verify file extensions match `supported_extensions`
-- Check log file for stability warnings
+- Check file permissions
+- Verify UTF-8 encoding
+- Ensure files contain required columns
+- Check file size limits
 
-**Memory errors with large files:**
-- Reduce `max_file_size_mb` setting
+**Lock timeout errors:**
+- Another instance may be running
+- Increase `lock_timeout_seconds`
+- Check for stale lock files
+
+**Memory issues with large files:**
+- Reduce `max_file_size_mb`
 - Process files in smaller batches
 - Monitor system memory usage
 
-**Email notifications not working:**
-- Verify SMTP settings
-- Check firewall/network restrictions
-- Use app-specific passwords for Gmail/Outlook
-- Test SMTP connection separately
-
-**Lock timeout errors:**
-- Increase `lock_timeout_seconds`
-- Check for competing processes
-- Verify filesystem supports file locking
-
 ### Debug Mode
-
-Run with debug logging for detailed troubleshooting:
-
+Enable debug logging to see detailed processing information:
 ```json
 {
   "log_level": "DEBUG",
@@ -269,35 +235,30 @@ Run with debug logging for detailed troubleshooting:
 }
 ```
 
-Or via command line:
-```bash
-python csv_watchdog.py --log-to-console
-```
-
 ## Security Considerations
 
-- **File Permissions**: Ensure appropriate read/write permissions on directories
-- **Email Credentials**: Store SMTP passwords securely (consider environment variables)
-- **Log Files**: May contain sensitive data; secure appropriately
-- **Network Access**: SMTP notifications require outbound network access
+- Input validation prevents processing of malformed files
+- File size limits prevent resource exhaustion
+- UTF-8 validation prevents encoding attacks
+- File locking prevents race conditions
+- Atomic file operations prevent data corruption
+
+## Performance Notes
+
+- Processing time scales with file size and number of columns
+- Memory usage is proportional to dataset size
+- Checksum calculation adds slight overhead but ensures reliability
+- File locking may create brief delays during concurrent access
 
 ## License
 
-This software is provided as-is for educational and commercial use. Modify and distribute freely.
+This script is provided as-is. Modify and distribute as needed for your use case.
 
 ## Contributing
 
-When contributing:
-1. Maintain backward compatibility
-2. Add comprehensive tests for new features
-3. Update documentation
-4. Follow existing code style
-5. Add logging for new operations
-
-## Support
-
-For issues and questions:
-1. Check the log files first
-2. Review configuration settings
-3. Test with `--dry-run` and `--log-to-console`
-4. Verify file permissions and directory structure
+When modifying the script:
+1. Maintain backward compatibility with existing configurations
+2. Add appropriate error handling for new features
+3. Update logging for new operations
+4. Test with various CSV formats and sizes
+5. Update this README for any new configuration options
