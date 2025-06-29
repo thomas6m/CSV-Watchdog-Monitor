@@ -1,0 +1,124 @@
+CSV WATCHDOG MONITOR - FLOW DIAGRAM
+=====================================
+
+START
+  |
+  v
+[Load Configuration] --> [Setup Logging] --> [Create Directories]
+  |
+  v
+[Parse CLI Arguments] --> [Create Monitor Instance]
+  |
+  v
+[Scan Watch Directory] --> {CSV Files Found?}
+  |                            |
+  | No                         | Yes
+  v                            v
+[Complete - No Files]    [Calculate MD5 Checksums]
+  |                            |
+  v                            v
+ END                     [Wait for Stability]
+                              |
+                              v
+                        [Recalculate MD5 Checksums]
+                              |
+                              v
+                        {Checksums Match?}
+                              |
+                         No   |   Yes
+                    +---------+   |
+                    |             v
+                    |       [Validate UTF-8 Encoding]
+                    |             |
+                    |             v
+                    |       {Valid Encoding?}
+                    |             |
+                    |        No   |   Yes
+                    |   +---------+   |
+                    |   |             v
+                    |   |       [Load CSV with Pandas]
+                    |   |             |
+                    |   |             v
+                    |   |       {CSV Load Success?}
+                    |   |             |
+                    |   |        No   |   Yes
+                    |   |   +---------+   |
+                    |   |   |             v
+                    |   |   |       [Validate DataFrame]
+                    |   |   |             |
+                    |   |   |             v
+                    |   |   |       {DataFrame Valid?}
+                    |   |   |             |
+                    |   |   |        No   |   Yes
+                    |   |   |   +---------+   |
+                    |   |   |   |             v
+                    |   |   |   |       [Acquire File Lock]
+                    |   |   |   |             |
+                    |   |   |   |             v
+                    |   |   |   |       {Lock Acquired?}
+                    |   |   |   |             |
+                    |   |   |   |        No   |   Yes
+                    |   |   |   |   +---------+   |
+                    |   |   |   |   |             v
+                    |   |   |   |   |       [Check Merged File]
+                    |   |   |   |   |             |
+                    |   |   |   |   |             v
+                    |   |   |   |   |       {Merged File Exists?}
+                    |   |   |   |   |             |
+                    |   |   |   |   |        No   |   Yes
+                    |   |   |   |   |             |     |
+                    |   |   |   |   |             v     v
+                    |   |   |   |   |    [Create Empty] [Load Existing]
+                    |   |   |   |   |             |     |
+                    |   |   |   |   |             v     v
+                    |   |   |   |   |       [Align Column Schemas]
+                    |   |   |   |   |             |
+                    |   |   |   |   |             v
+                    |   |   |   |   |       [Identify New Keys]
+                    |   |   |   |   |             |
+                    |   |   |   |   |             v
+                    |   |   |   |   |       [Remove Existing Records]
+                    |   |   |   |   |             |
+                    |   |   |   |   |             v
+                    |   |   |   |   |       [Concatenate Data]
+                    |   |   |   |   |             |
+                    |   |   |   |   |             v
+                    |   |   |   |   |       {Obsolete Columns?}
+                    |   |   |   |   |             |
+                    |   |   |   |   |        Yes  |   No
+                    |   |   |   |   |             |     |
+                    |   |   |   |   |             v     |
+                    |   |   |   |   |       [Drop Columns] |
+                    |   |   |   |   |             |     |
+                    |   |   |   |   |             v     v
+                    |   |   |   |   |       {Dry Run Mode?}
+                    |   |   |   |   |             |
+                    |   |   |   |   |        Yes  |   No
+                    |   |   |   |   |             |     |
+                    |   |   |   |   |             v     v
+                    |   |   |   |   |    [Log Results] [Write File]
+                    |   |   |   |   |             |     |
+                    |   |   |   |   |             |     v
+                    |   |   |   |   |             |  [Save Metadata]
+                    |   |   |   |   |             |     |
+                    |   |   |   |   |             |     v
+                    |   |   |   |   |             |  [Archive File]
+                    |   |   |   |   |             |     |
+                    |   |   |   |   |             v     v
+                    |   |   |   |   |       [Release File Lock]
+                    |   |   |   |   |             |
+                    +---+---+---+---+-------------+
+                        |
+                        v
+                  {More Files to Process?}
+                        |
+                   Yes  |   No
+                        |     |
+                --------+     v
+               |        [Log Summary]
+               |              |
+               |              v
+               |            END
+               |
+               v
+    [Return to Scan Directory]
