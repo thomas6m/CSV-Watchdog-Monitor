@@ -1,0 +1,73 @@
+flowchart TD
+    A[🚀 Script Start] --> B[⚙️ Load Configuration]
+    B --> C[📝 Setup Logging]
+    C --> D[📁 Create Directories]
+    D --> E[🔍 Parse CLI Arguments]
+    E --> F[🎯 Create Monitor Instance]
+    
+    F --> G[📂 Scan Watch Directory]
+    G --> H{📄 CSV Files Found?}
+    H -->|No| Z[✅ Complete - No Files]
+    H -->|Yes| I[🧮 Calculate MD5 Checksums]
+    
+    I --> J[⏳ Wait for Stability]
+    J --> K[🧮 Recalculate MD5 Checksums]
+    K --> L{🔄 Checksums Match?}
+    L -->|No| M[⚠️ File Unstable - Skip]
+    L -->|Yes| N[✅ File is Stable]
+    
+    M --> G
+    N --> O[🧪 Validate UTF-8 Encoding]
+    O --> P{🔤 Valid Encoding?}
+    P -->|No| Q[❌ Encoding Error - Skip File]
+    P -->|Yes| R[📊 Load CSV with Pandas]
+    
+    Q --> G
+    R --> S{📋 CSV Load Success?}
+    S -->|No| T[❌ CSV Parse Error - Skip File]
+    S -->|Yes| U[🔍 Validate DataFrame]
+    
+    T --> G
+    U --> V{✅ DataFrame Valid?}
+    V -->|No| W[❌ Validation Error - Skip File]
+    V -->|Yes| X[🔒 Acquire File Lock]
+    
+    W --> G
+    X --> Y{🔓 Lock Acquired?}
+    Y -->|No| AA[❌ Lock Timeout - Skip File]
+    Y -->|Yes| BB[📄 Check if Merged File Exists]
+    
+    AA --> G
+    BB --> CC{📊 Merged File Exists?}
+    CC -->|No| DD[📋 Create Empty Base DataFrame]
+    CC -->|Yes| EE[📊 Load Existing Merged File]
+    
+    DD --> FF[🔗 Align Column Schemas]
+    EE --> GG{📊 Load Success?}
+    GG -->|No| DD
+    GG -->|Yes| FF
+    
+    FF --> HH[🎯 Identify New Keys]
+    HH --> II[🗑️ Remove Existing Records with Same Keys]
+    II --> JJ[➕ Concatenate Old + New Data]
+    JJ --> KK[🧹 Check for Obsolete Columns]
+    
+    KK --> LL{🔍 Obsolete Columns Found?}
+    LL -->|Yes| MM[🗑️ Drop Obsolete Columns]
+    LL -->|No| NN[💾 Prepare Final DataFrame]
+    MM --> NN
+    
+    NN --> OO{🧪 Dry Run Mode?}
+    OO -->|Yes| PP[📝 Log Dry Run Results]
+    OO -->|No| QQ[💾 Write to Temporary File]
+    
+    PP --> SS[🔓 Release File Lock]
+    QQ --> RR[⚡ Atomic Replace Merged File]
+    RR --> TT[📄 Save Metadata JSON]
+    TT --> UU[📦 Archive Original File]
+    UU --> SS
+    
+    SS --> VV{📂 More Files to Process?}
+    VV -->|Yes| G
+    VV -->|No| WW[📊 Log Processing Summary]
+    WW --> XX[✅ Script Complete]
